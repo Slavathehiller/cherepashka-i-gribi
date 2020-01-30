@@ -7,11 +7,19 @@ mainmenu = Menu(window)
 window.config(menu=mainmenu)
 
 TurtleSymbol = chr(9788)
-
-TurtleCords = {"x": 0, "y": 0}
+BackgroundSymbol = chr(9632)
 
 sizeX = 30
 sizeY = 15
+
+TurtleCordsX = sizeX // 2
+TurtleCordsY = sizeY // 2
+
+Up = 1
+Down = 2
+Left = 3
+Right = 4
+
 
 VisualMap = Label(window)
 
@@ -23,9 +31,8 @@ def createNewMap():
     for _ in range(sizeY):
         Line = list()
         for _ in range(sizeX):
-            Line.append(chr(9632))
+            Line.append(BackgroundSymbol)
         Map.append(Line)
-
 
 def drawMap():
     global Map
@@ -34,13 +41,38 @@ def drawMap():
         for Symbol in Line:
             MapString = MapString + Symbol
         MapString += "\n"
-    VisualMap.config(text=MapString)
+    VisualMap.config(text=MapString, font="terminal 20")
     VisualMap.pack()
 
 
 def placeTurtle():
-    Map[TurtleCords["y"]][TurtleCords["x"]] = TurtleSymbol
+    Map[TurtleCordsY][TurtleCordsX] = TurtleSymbol
     drawMap()
+
+def KeyPress(event):
+    if event.keycode == 38:
+        moveTurtle(Up)
+    elif event.keycode == 37:
+        moveTurtle(Left)
+    elif event.keycode == 40:
+        moveTurtle(Down)
+    elif event.keycode == 39:
+        moveTurtle(Right)
+
+def moveTurtle(direction):
+    global TurtleCordsY, TurtleCordsX
+    Map[TurtleCordsY][TurtleCordsX] = BackgroundSymbol
+    if direction == Up:
+        TurtleCordsY = max(TurtleCordsY - 1, 0)
+    if direction == Left:
+        TurtleCordsX = max(TurtleCordsX - 1, 0)
+    if direction == Down:
+        TurtleCordsY = min(TurtleCordsY + 1, sizeY - 1)
+    if direction == Right:
+        TurtleCordsX = min(TurtleCordsX + 1, sizeX - 1)
+    placeTurtle()
+
+
 
 def Newgame():
     createNewMap()
@@ -49,7 +81,7 @@ def Newgame():
 
 
 menuFile = Menu(mainmenu, tearoff=0)
-menuFile.add_command(label="Выход", command=lambda:exit(0))
+menuFile.add_command(label="Выход", command=lambda: exit(0))
 
 
 menuGame = Menu(mainmenu, tearoff=0)
@@ -63,7 +95,7 @@ mainmenu.add_cascade(label="Файл", menu=menuFile)
 mainmenu.add_cascade(label="Игра", menu=menuGame)
 mainmenu.add_cascade(label="О программе", menu=menuAbout)
 
-
+window.bind("<Key>", KeyPress)
 
 
 
