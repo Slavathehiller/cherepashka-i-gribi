@@ -10,7 +10,7 @@ window.config(menu=mainmenu)
 TurtleSymbol = chr(164)
 BackgroundSymbol = chr(9633)
 MushroomSymbol = chr(84)
-
+defMushroomCount = 5
 MushroomCount = 5
 MushroomCords = list()
 
@@ -31,6 +31,41 @@ VisualMap = Label(window)
 
 Map = list()
 
+
+
+def OptionsOk(options, Y, X ,M):
+    global sizeY, sizeX, defMushroomCount
+    sizeY = int(Y.get())
+    sizeX = int(X.get())
+    defMushroomCount = int(M.get())
+    options.destroy()
+
+
+def SetOptions():
+    options = Toplevel(window)
+    options.title("Настройки игры")
+    sizeYlabel = Label(options, text="Высота поля: ")
+    sizeYlabel.grid(row=0, column=0, sticky=W, padx=4, pady=2)
+    sizeYentry = Entry(options)
+    sizeYentry.grid(row=0, column=1, sticky=W, padx=4, pady=2)
+
+    sizeXlabel = Label(options, text="Ширина поля: ")
+    sizeXlabel.grid(row=1, column=0, sticky=W, padx=4, pady=2)
+    sizeXentry = Entry(options)
+    sizeXentry.grid(row=1, column=1, sticky=W, padx=4, pady=2)
+
+    MushroomCountLabel = Label(options, text="Количество грибов: ")
+    MushroomCountLabel.grid(row=2, column=0, sticky=W, padx=4, pady=2)
+    MushroomCountentry = Entry(options)
+    MushroomCountentry.grid(row=2, column=1, sticky=W, padx=4, pady=2)
+
+    OKbutton = Button(options, text="Ok", height=1, width=6)
+    OKbutton.grid(row=3, column=0, sticky=E, padx=30)
+    OKbutton.bind("<Button-1>", lambda event: OptionsOk(options, sizeYentry, sizeXentry, MushroomCountentry))
+
+    Cancelbutton = Button(options, text="Cancel", height=1, width=6)
+    Cancelbutton.grid(row=3, column=1, sticky=W, padx=30)
+    Cancelbutton.bind("<Button-1>", lambda event: options.destroy())
 
 def createNewMap():
     global Map
@@ -59,12 +94,16 @@ def placeTurtle():
 
 
 def placeMushrooms():
+    global MushroomCords, MushroomCount
+    MushroomCords = list()
+    MushroomCount = defMushroomCount
     for i in range(MushroomCount):
-        global MushroomCords
-        x, y = 0, 0
-        while isMushroom(x, y):
+        x = random.randint(0, sizeX - 1)
+        y = random.randint(0, sizeY - 1)
+        while not isFree(x, y):
             x = random.randint(0, sizeX - 1)
             y = random.randint(0, sizeY - 1)
+            print(x, y, MushroomCords)
         cords = [x, y]
         MushroomCords.append(cords)
         Map[y][x] = MushroomSymbol
@@ -81,6 +120,9 @@ def isMushroom(x, y):
         if cord[0] == x and cord[1] == y:
             return True
     return False
+
+def isFree(x, y):
+    return not isMushroom(x, y) and not (x == TurtleCordsX and y == TurtleCordsY)
 
 def checkAndEat():
     global MushroomCount
@@ -120,6 +162,9 @@ def moveTurtle(direction):
 
 
 def Newgame():
+    global TurtleCordsY, TurtleCordsX
+    TurtleCordsX = sizeX // 2
+    TurtleCordsY = sizeY // 2
     createNewMap()
     drawMap()
     placeMushrooms()
@@ -132,7 +177,7 @@ menuFile.add_command(label="Выход", command=lambda: exit(0))
 
 menuGame = Menu(mainmenu, tearoff=0)
 menuGame.add_command(label="Начать игру", command=Newgame)
-
+menuGame.add_command(label="Настройки", command=SetOptions)
 
 menuAbout = Menu(mainmenu, tearoff=0)
 
@@ -140,6 +185,7 @@ menuAbout = Menu(mainmenu, tearoff=0)
 mainmenu.add_cascade(label="Файл", menu=menuFile)
 mainmenu.add_cascade(label="Игра", menu=menuGame)
 mainmenu.add_cascade(label="О программе", menu=menuAbout)
+
 
 window.bind("<Key>", KeyPress)
 
