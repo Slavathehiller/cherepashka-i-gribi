@@ -31,32 +31,77 @@ VisualMap = Label(window)
 
 Map = list()
 
-
+def ShowError(ErrorText):
+    ErrorWindow = Toplevel()
+    ErrorWindow.title("ОШИБКА")
+    ErrorWindow.geometry("300x60")
+    Errorlabel = Label(ErrorWindow, text=ErrorText)
+    Errorlabel.pack()
+    ErrorButton = Button(ErrorWindow, text="Ok")
+    ErrorButton.bind("<Button-1>", lambda event: ErrorWindow.destroy())
+    ErrorButton.pack()
 
 def OptionsOk(options, Y, X ,M):
     global sizeY, sizeX, defMushroomCount
-    sizeY = int(Y.get())
-    sizeX = int(X.get())
-    defMushroomCount = int(M.get())
+    try:
+        tryY = int(Y.get())
+    except:
+        ShowError("Высота поля введена некоректно")
+        Y.focus_set()
+        return
+    try:
+        tryX = int(X.get())
+    except:
+        ShowError("Ширина поля введена некоректно")
+        X.focus_set()
+        return
+    try:
+        tryM = int(M.get())
+    except:
+        ShowError("Количество грибов введено некоректно")
+        M.focus_set()
+        return
+    if tryY > 30:
+        ShowError("Высота поля должна быть не более 30 клеток")
+        Y.focus_set()
+        return
+    if tryX > 100:
+        ShowError("Ширина поля должна быть не более 100 клеток")
+        X.focus_set()
+        return
+    defMC = tryY * tryX - 1
+    if tryM > defMC:
+        ShowError("Количество грибов должно быть не более " + str(defMC))
+        M.focus_set()
+        return
+    sizeY = tryY
+    sizeX = tryX
+    defMushroomCount = tryM
     options.destroy()
 
 
 def SetOptions():
+    VarY = StringVar()
+    VarX = StringVar()
+    VarM = StringVar()
     options = Toplevel(window)
     options.title("Настройки игры")
     sizeYlabel = Label(options, text="Высота поля: ")
     sizeYlabel.grid(row=0, column=0, sticky=W, padx=4, pady=2)
-    sizeYentry = Entry(options)
+    sizeYentry = Entry(options, textvariable=VarY)
+    VarY.set(sizeY)
     sizeYentry.grid(row=0, column=1, sticky=W, padx=4, pady=2)
 
     sizeXlabel = Label(options, text="Ширина поля: ")
     sizeXlabel.grid(row=1, column=0, sticky=W, padx=4, pady=2)
-    sizeXentry = Entry(options)
+    sizeXentry = Entry(options, textvariable=VarX)
+    VarX.set(sizeX)
     sizeXentry.grid(row=1, column=1, sticky=W, padx=4, pady=2)
 
     MushroomCountLabel = Label(options, text="Количество грибов: ")
     MushroomCountLabel.grid(row=2, column=0, sticky=W, padx=4, pady=2)
-    MushroomCountentry = Entry(options)
+    MushroomCountentry = Entry(options, textvariable=VarM)
+    VarM.set(defMushroomCount)
     MushroomCountentry.grid(row=2, column=1, sticky=W, padx=4, pady=2)
 
     OKbutton = Button(options, text="Ok", height=1, width=6)
@@ -103,7 +148,6 @@ def placeMushrooms():
         while not isFree(x, y):
             x = random.randint(0, sizeX - 1)
             y = random.randint(0, sizeY - 1)
-            print(x, y, MushroomCords)
         cords = [x, y]
         MushroomCords.append(cords)
         Map[y][x] = MushroomSymbol
