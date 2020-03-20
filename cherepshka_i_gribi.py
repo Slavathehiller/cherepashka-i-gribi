@@ -1,5 +1,6 @@
 from tkinter import*
 import random
+import winsound
 
 window = Tk()
 window.title("Черепашка и грибы")
@@ -7,12 +8,19 @@ window.geometry("800x600")
 mainmenu = Menu(window)
 window.config(menu=mainmenu)
 
-TurtleSymbol = chr(164)
+TurtleSymbol = chr(81)
 BackgroundSymbol = chr(9633)
-MushroomSymbol = chr(84)
+MushroomSymbol = chr(0xB7)
+ObstacleSymbol = chr(0xA1)
+
+ObstacleCount = 5
+defObstacleCount = 5
+ObstacleCords = list()
+
 defMushroomCount = 5
 MushroomCount = 5
 MushroomCords = list()
+
 
 sizeX = 10
 sizeY = 5
@@ -31,77 +39,32 @@ VisualMap = Label(window)
 
 Map = list()
 
-def ShowError(ErrorText):
-    ErrorWindow = Toplevel()
-    ErrorWindow.title("ОШИБКА")
-    ErrorWindow.geometry("300x60")
-    Errorlabel = Label(ErrorWindow, text=ErrorText)
-    Errorlabel.pack()
-    ErrorButton = Button(ErrorWindow, text="Ok")
-    ErrorButton.bind("<Button-1>", lambda event: ErrorWindow.destroy())
-    ErrorButton.pack()
+
 
 def OptionsOk(options, Y, X ,M):
     global sizeY, sizeX, defMushroomCount
-    try:
-        tryY = int(Y.get())
-    except:
-        ShowError("Высота поля введена некоректно")
-        Y.focus_set()
-        return
-    try:
-        tryX = int(X.get())
-    except:
-        ShowError("Ширина поля введена некоректно")
-        X.focus_set()
-        return
-    try:
-        tryM = int(M.get())
-    except:
-        ShowError("Количество грибов введено некоректно")
-        M.focus_set()
-        return
-    if tryY > 30:
-        ShowError("Высота поля должна быть не более 30 клеток")
-        Y.focus_set()
-        return
-    if tryX > 100:
-        ShowError("Ширина поля должна быть не более 100 клеток")
-        X.focus_set()
-        return
-    defMC = tryY * tryX - 1
-    if tryM > defMC:
-        ShowError("Количество грибов должно быть не более " + str(defMC))
-        M.focus_set()
-        return
-    sizeY = tryY
-    sizeX = tryX
-    defMushroomCount = tryM
+    sizeY = int(Y.get())
+    sizeX = int(X.get())
+    defMushroomCount = int(M.get())
     options.destroy()
 
 
 def SetOptions():
-    VarY = StringVar()
-    VarX = StringVar()
-    VarM = StringVar()
     options = Toplevel(window)
     options.title("Настройки игры")
     sizeYlabel = Label(options, text="Высота поля: ")
     sizeYlabel.grid(row=0, column=0, sticky=W, padx=4, pady=2)
-    sizeYentry = Entry(options, textvariable=VarY)
-    VarY.set(sizeY)
+    sizeYentry = Entry(options)
     sizeYentry.grid(row=0, column=1, sticky=W, padx=4, pady=2)
 
     sizeXlabel = Label(options, text="Ширина поля: ")
     sizeXlabel.grid(row=1, column=0, sticky=W, padx=4, pady=2)
-    sizeXentry = Entry(options, textvariable=VarX)
-    VarX.set(sizeX)
+    sizeXentry = Entry(options)
     sizeXentry.grid(row=1, column=1, sticky=W, padx=4, pady=2)
 
     MushroomCountLabel = Label(options, text="Количество грибов: ")
     MushroomCountLabel.grid(row=2, column=0, sticky=W, padx=4, pady=2)
-    MushroomCountentry = Entry(options, textvariable=VarM)
-    VarM.set(defMushroomCount)
+    MushroomCountentry = Entry(options)
     MushroomCountentry.grid(row=2, column=1, sticky=W, padx=4, pady=2)
 
     OKbutton = Button(options, text="Ok", height=1, width=6)
@@ -112,13 +75,20 @@ def SetOptions():
     Cancelbutton.grid(row=3, column=1, sticky=W, padx=30)
     Cancelbutton.bind("<Button-1>", lambda event: options.destroy())
 
+
+
 def createNewMap():
     global Map
     Map = []
-    for _ in range(sizeY):
+    for y in range(sizeY):
         Line = list()
-        for _ in range(sizeX):
-            Line.append(BackgroundSymbol)
+        for x in range(sizeX):
+            if isObstacle(x, y):
+                Line.append(ObstacleSymbol)
+            elif isMushroom(x, y):
+                Line.append(MushroomSymbol)
+            else:
+                Line.append(BackgroundSymbol)
         Map.append(Line)
 
 
@@ -129,13 +99,27 @@ def drawMap():
         for Symbol in Line:
             MapString = MapString + Symbol
         MapString += "\n"
-    VisualMap.config(text=MapString, font="terminal 20")
+    VisualMap.config(text=MapString, font="Symbol 20")
     VisualMap.pack()
-
+    print(ObstacleCords)
 
 def placeTurtle():
     Map[TurtleCordsY][TurtleCordsX] = TurtleSymbol
     drawMap()
+
+
+def placeObstacles():
+    global ObstacleCords, ObstacleCount
+    ObstacleCords = list()
+    ObstacleCount = defObstacleCount
+    for i in range(ObstacleCount):
+        x = random.randint(0, sizeX - 1)
+        y = random.randint(0, sizeY - 1)
+        while not isFree(x, y):
+            x = random.randint(0, sizeX - 1)
+            y = random.randint(0, sizeY - 1)
+        cords = [x, y]
+        ObstacleCords.append(cords)
 
 
 def placeMushrooms():
@@ -150,8 +134,6 @@ def placeMushrooms():
             y = random.randint(0, sizeY - 1)
         cords = [x, y]
         MushroomCords.append(cords)
-        Map[y][x] = MushroomSymbol
-    drawMap()
 
 
 
@@ -159,14 +141,23 @@ def refreshMushroomCounter():
     VisualMushroomCount.config(text="Осталось грибов: " + str(MushroomCount))
     VisualMushroomCount.pack()
 
+def isTurtle(x, y):
+    return x == TurtleCordsX and y == TurtleCordsY
+
 def isMushroom(x, y):
     for cord in (MushroomCords):
         if cord[0] == x and cord[1] == y:
             return True
     return False
 
+def isObstacle(x, y):
+    for cord in (ObstacleCords):
+        if cord[0] == x and cord[1] == y:
+            return True
+    return False
+
 def isFree(x, y):
-    return not isMushroom(x, y) and not (x == TurtleCordsX and y == TurtleCordsY)
+    return not isMushroom(x, y) and not isTurtle(x, y) and not isObstacle(x, y)
 
 def checkAndEat():
     global MushroomCount
@@ -175,6 +166,8 @@ def checkAndEat():
         if cord[0] == TurtleCordsX and cord[1] == TurtleCordsY:
             MushroomCount = MushroomCount - 1
             del MushroomCords[i]
+
+            winsound.PlaySound("Niam.wav", winsound.SND_ASYNC + winsound.SND_PURGE)
             refreshMushroomCounter()
             return
 
@@ -192,15 +185,21 @@ def KeyPress(event):
 
 def moveTurtle(direction):
     global TurtleCordsY, TurtleCordsX
-    Map[TurtleCordsY][TurtleCordsX] = BackgroundSymbol
+    CordY = TurtleCordsY
+    CordX = TurtleCordsX
     if direction == Up:
-        TurtleCordsY = max(TurtleCordsY - 1, 0)
+        CordY = max(TurtleCordsY - 1, 0)
     if direction == Left:
-        TurtleCordsX = max(TurtleCordsX - 1, 0)
+        CordX = max(TurtleCordsX - 1, 0)
     if direction == Down:
-        TurtleCordsY = min(TurtleCordsY + 1, sizeY - 1)
+        CordY = min(TurtleCordsY + 1, sizeY - 1)
     if direction == Right:
-        TurtleCordsX = min(TurtleCordsX + 1, sizeX - 1)
+        CordX = min(TurtleCordsX + 1, sizeX - 1)
+    if isObstacle(CordX, CordY):
+        return
+    Map[TurtleCordsY][TurtleCordsX] = BackgroundSymbol
+    TurtleCordsY = CordY
+    TurtleCordsX = CordX
     placeTurtle()
     checkAndEat()
 
@@ -209,15 +208,15 @@ def Newgame():
     global TurtleCordsY, TurtleCordsX
     TurtleCordsX = sizeX // 2
     TurtleCordsY = sizeY // 2
+    placeObstacles()
+    placeMushrooms()
     createNewMap()
     drawMap()
-    placeMushrooms()
     refreshMushroomCounter()
     placeTurtle()
 
 menuFile = Menu(mainmenu, tearoff=0)
 menuFile.add_command(label="Выход", command=lambda: exit(0))
-
 
 menuGame = Menu(mainmenu, tearoff=0)
 menuGame.add_command(label="Начать игру", command=Newgame)
@@ -225,21 +224,11 @@ menuGame.add_command(label="Настройки", command=SetOptions)
 
 menuAbout = Menu(mainmenu, tearoff=0)
 
-
 mainmenu.add_cascade(label="Файл", menu=menuFile)
 mainmenu.add_cascade(label="Игра", menu=menuGame)
 mainmenu.add_cascade(label="О программе", menu=menuAbout)
 
-
 window.bind("<Key>", KeyPress)
-
-
-
-
-
-
-
-
 
 window.mainloop()
 
