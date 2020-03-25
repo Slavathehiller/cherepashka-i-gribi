@@ -41,11 +41,36 @@ Map = list()
 
 
 
-def OptionsOk(options, Y, X ,M):
-    global sizeY, sizeX, defMushroomCount
-    sizeY = int(Y.get())
-    sizeX = int(X.get())
-    defMushroomCount = int(M.get())
+def OptionsOk(options, Y, X ,M, O):
+    global sizeY, sizeX, defMushroomCount, defObstacleCount
+    ErrorVidget = None
+    try:
+        sizeY = int(Y.get())
+    except:
+        ErrorVidget = Y
+    try:
+        sizeX = int(X.get())
+    except:
+        ErrorVidget = X
+    try:
+        defMushroomCount = int(M.get())
+    except:
+        ErrorVidget = M
+    try:
+        defObstacleCount = int(O.get())
+    except:
+        ErrorVidget = O
+    if ErrorVidget != None:
+        ErrorVidget.focus_set()
+        ErrorWindow = Toplevel()
+        ErrorWindow.title("Ошибка!!!")
+        ErrorWindow.geometry("320x75")
+        ErrorLabel = Label(ErrorWindow, text="Некоректные данные")
+        ErrorLabel.pack()
+        ErrorButton = Button(ErrorWindow, text="Ok", height=1, width=6)
+        ErrorButton.bind("<Button-1>", lambda event: ErrorWindow.destroy())
+        ErrorButton.pack()
+        return
     options.destroy()
 
 
@@ -67,12 +92,17 @@ def SetOptions():
     MushroomCountentry = Entry(options)
     MushroomCountentry.grid(row=2, column=1, sticky=W, padx=4, pady=2)
 
+    ObstacleCountLabel = Label(options, text="Количество препятствий: ")
+    ObstacleCountLabel.grid(row=3, column=0, sticky=W, padx=4, pady=2)
+    ObstacleCountEntry = Entry(options)
+    ObstacleCountEntry.grid(row=3, column=1, sticky=W, padx=4, pady=2)
+
     OKbutton = Button(options, text="Ok", height=1, width=6)
-    OKbutton.grid(row=3, column=0, sticky=E, padx=30)
-    OKbutton.bind("<Button-1>", lambda event: OptionsOk(options, sizeYentry, sizeXentry, MushroomCountentry))
+    OKbutton.grid(row=4, column=0, sticky=E, padx=30)
+    OKbutton.bind("<Button-1>", lambda event: OptionsOk(options, sizeYentry, sizeXentry, MushroomCountentry, ObstacleCountEntry))
 
     Cancelbutton = Button(options, text="Cancel", height=1, width=6)
-    Cancelbutton.grid(row=3, column=1, sticky=W, padx=30)
+    Cancelbutton.grid(row=4, column=1, sticky=W, padx=30)
     Cancelbutton.bind("<Button-1>", lambda event: options.destroy())
 
 
@@ -101,7 +131,7 @@ def drawMap():
         MapString += "\n"
     VisualMap.config(text=MapString, font="Symbol 20")
     VisualMap.pack()
-    print(ObstacleCords)
+
 
 def placeTurtle():
     Map[TurtleCordsY][TurtleCordsX] = TurtleSymbol
