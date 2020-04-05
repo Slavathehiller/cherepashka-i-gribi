@@ -1,6 +1,7 @@
 from tkinter import*
 import random
 import winsound
+import math
 
 window = Tk()
 window.title("Черепашка и грибы")
@@ -8,19 +9,25 @@ window.geometry("800x600")
 mainmenu = Menu(window)
 window.config(menu=mainmenu)
 
+gameEnded = False
+
 TurtleSymbol = chr(81)
 BackgroundSymbol = chr(9633)
 MushroomSymbol = chr(0xB7)
 ObstacleSymbol = chr(0xA1)
+MoleSymbol = chr(0x69)
 
-ObstacleCount = 5
 defObstacleCount = 5
+ObstacleCount = 5
 ObstacleCords = list()
 
 defMushroomCount = 5
 MushroomCount = 5
 MushroomCords = list()
 
+defMoleCount = 5
+MoleCount = 5
+MoleCords = list()
 
 sizeX = 10
 sizeY = 5
@@ -41,8 +48,8 @@ Map = list()
 
 
 
-def OptionsOk(options, Y, X ,M, O):
-    global sizeY, sizeX, defMushroomCount, defObstacleCount
+def OptionsOk(options, Y, X ,M, O, SM):
+    global sizeY, sizeX, defMushroomCount, defObstacleCount, defMoleCount
     ErrorVidget = None
     try:
         sizeY = int(Y.get())
@@ -56,6 +63,10 @@ def OptionsOk(options, Y, X ,M, O):
         defMushroomCount = int(M.get())
     except:
         ErrorVidget = M
+    try:
+        defMoleCount = int(SM.get())
+    except:
+        ErrorVidget = SM
     try:
         defObstacleCount = int(O.get())
     except:
@@ -97,12 +108,17 @@ def SetOptions():
     ObstacleCountEntry = Entry(options)
     ObstacleCountEntry.grid(row=3, column=1, sticky=W, padx=4, pady=2)
 
+    MoleCountLabel = Label(options, text="Количество саблезубых кротов: ")
+    MoleCountLabel.grid(row=4, column=0, sticky=W, padx=4, pady=2)
+    MoleCountEntry = Entry(options)
+    MoleCountEntry.grid(row=4, column=1, sticky=W, padx=4, pady=2)
+
     OKbutton = Button(options, text="Ok", height=1, width=6)
-    OKbutton.grid(row=4, column=0, sticky=E, padx=30)
-    OKbutton.bind("<Button-1>", lambda event: OptionsOk(options, sizeYentry, sizeXentry, MushroomCountentry, ObstacleCountEntry))
+    OKbutton.grid(row=5, column=0, sticky=E, padx=30)
+    OKbutton.bind("<Button-1>", lambda event: OptionsOk(options, sizeYentry, sizeXentry, MushroomCountentry, ObstacleCountEntry, MoleCountEntry))
 
     Cancelbutton = Button(options, text="Cancel", height=1, width=6)
-    Cancelbutton.grid(row=4, column=1, sticky=W, padx=30)
+    Cancelbutton.grid(row=5, column=1, sticky=W, padx=30)
     Cancelbutton.bind("<Button-1>", lambda event: options.destroy())
 
 
@@ -117,6 +133,8 @@ def createNewMap():
                 Line.append(ObstacleSymbol)
             elif isMushroom(x, y):
                 Line.append(MushroomSymbol)
+            elif isMole(x, y):
+                Line.append(MoleSymbol)
             else:
                 Line.append(BackgroundSymbol)
         Map.append(Line)
@@ -152,6 +170,19 @@ def placeObstacles():
         ObstacleCords.append(cords)
 
 
+def placeMole():
+    global MoleCords, MoleCount
+    MoleCords = list()
+    MoleCount = defMoleCount
+    for i in range(MoleCount):
+        x = random.randint(0, sizeX - 1)
+        y = random.randint(0, sizeY - 1)
+        while not isAvaliableforMole(x, y):
+            x = random.randint(0, sizeX - 1)
+            y = random.randint(0, sizeY - 1)
+        cords = [x, y]
+        MoleCords.append(cords)
+
 def placeMushrooms():
     global MushroomCords, MushroomCount
     MushroomCords = list()
@@ -159,17 +190,34 @@ def placeMushrooms():
     for i in range(MushroomCount):
         x = random.randint(0, sizeX - 1)
         y = random.randint(0, sizeY - 1)
-        while not isFree(x, y):
+        while not isAvaliableforMushroom(x, y):
             x = random.randint(0, sizeX - 1)
             y = random.randint(0, sizeY - 1)
         cords = [x, y]
         MushroomCords.append(cords)
 
+def distanceToTurtle(x, y):
+    global MoleCords, TurtleCordsX, TurtleCordsY
+    return math.sqrt((TurtleCordsX - x) ** 2 + (TurtleCordsY - y) ** 2)
 
+
+def isSurround(x, y):
+    return isObstacleOrOut(x - 1, y) and isObstacleOrOut(x, y - 1) \
+            and isObstacleOrOut(x + 1, y) and isObstacleOrOut(x, y + 1)
+
+def isAvaliable(x, y):
+    return isFree(x, y) and not isSurround(x, y)
+
+def isAvaliableforMole(x, y):
+    return isAvaliable(x, y) and distanceToTurtle(x, y) > 4
+
+def isAvaliableforMushroom(x, y):
+    return isAvaliable(x, y)
 
 def refreshMushroomCounter():
     VisualMushroomCount.config(text="Осталось грибов: " + str(MushroomCount))
     VisualMushroomCount.pack()
+
 
 def isTurtle(x, y):
     return x == TurtleCordsX and y == TurtleCordsY
@@ -186,8 +234,17 @@ def isObstacle(x, y):
             return True
     return False
 
+def isMole(x, y):
+    for cord in (MoleCords):
+        if cord[0] == x and cord[1] == y:
+            return True
+    return False
+
+def isObstacleOrOut(x, y):
+    return isObstacle(x, y) or x < 0 or y < 0 or x > sizeX or y > sizeY
+
 def isFree(x, y):
-    return not isMushroom(x, y) and not isTurtle(x, y) and not isObstacle(x, y)
+    return not isMushroom(x, y) and not isTurtle(x, y) and not isObstacle(x, y) and not isMole(x, y)
 
 def checkAndEat():
     global MushroomCount
@@ -196,11 +253,12 @@ def checkAndEat():
         if cord[0] == TurtleCordsX and cord[1] == TurtleCordsY:
             MushroomCount = MushroomCount - 1
             del MushroomCords[i]
-
             winsound.PlaySound("Niam.wav", winsound.SND_ASYNC + winsound.SND_PURGE)
             refreshMushroomCounter()
+            if MushroomCount == 0:
+                winsound.PlaySound("yraa.wav", winsound.SND_ASYNC + winsound.SND_PURGE)
+                winGame()
             return
-
 
 def KeyPress(event):
     if event.keycode == 38:
@@ -212,9 +270,37 @@ def KeyPress(event):
     elif event.keycode == 39:
         moveTurtle(Right)
 
+def winGame():
+    global gameEnded
+    gameEnded = True
+    loseGameWindow = Toplevel()
+    loseGameWindow.title("Победа")
+    loseGameWindow.geometry("300x80")
+    loseGameLabel = Label(loseGameWindow, text="Вы выиграли")
+    loseGameLabel.pack()
+    CloseButton = Button(loseGameWindow, text="Закрыть")
+    CloseButton.bind("<Button-1>", lambda event: loseGameWindow.destroy())
+    CloseButton.pack()
+
+def loseGame():
+    global gameEnded
+    gameEnded = True
+    MushroomPicked = defMushroomCount - MushroomCount
+    loseGameWindow = Toplevel()
+    loseGameWindow.title("Поражение")
+    loseGameWindow.geometry("300x80")
+    loseGameLabel = Label(loseGameWindow, text="Вы проиграли")
+    loseGameLabel.pack()
+    MushroomLabel = Label(loseGameWindow, text="Собрано грибов: " + str(MushroomPicked))
+    MushroomLabel.pack()
+    CloseButton = Button(loseGameWindow, text="Закрыть")
+    CloseButton.bind("<Button-1>", lambda event: loseGameWindow.destroy())
+    CloseButton.pack()
 
 def moveTurtle(direction):
-    global TurtleCordsY, TurtleCordsX
+    global TurtleCordsY, TurtleCordsX, gameEnded
+    if gameEnded:
+        return
     CordY = TurtleCordsY
     CordX = TurtleCordsX
     if direction == Up:
@@ -230,16 +316,23 @@ def moveTurtle(direction):
     Map[TurtleCordsY][TurtleCordsX] = BackgroundSymbol
     TurtleCordsY = CordY
     TurtleCordsX = CordX
+    if isMole(TurtleCordsX, TurtleCordsY):
+        winsound.PlaySound("aiaiai.wav", winsound.SND_ASYNC + winsound.SND_PURGE)
+        loseGame()
+        drawMap()
+        return
     placeTurtle()
     checkAndEat()
 
 
 def Newgame():
-    global TurtleCordsY, TurtleCordsX
+    global TurtleCordsY, TurtleCordsX, gameEnded
+    gameEnded = False
     TurtleCordsX = sizeX // 2
     TurtleCordsY = sizeY // 2
     placeObstacles()
     placeMushrooms()
+    placeMole()
     createNewMap()
     drawMap()
     refreshMushroomCounter()
