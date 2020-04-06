@@ -46,42 +46,50 @@ VisualMap = Label(window)
 
 Map = list()
 
-
+def ShowError(ErrorText, vidget = None):
+    ErrorWindow = Toplevel()
+    ErrorWindow.title("ОШИБКА")
+    ErrorWindow.geometry("300x60")
+    Errorlabel = Label(ErrorWindow, text=ErrorText)
+    Errorlabel.pack()
+    ErrorButton = Button(ErrorWindow, text="Ok")
+    ErrorButton.bind("<Button-1>", lambda event: ErrorWindow.destroy())
+    ErrorButton.pack()
+    if vidget != None:
+        vidget.focus_set()
 
 def OptionsOk(options, Y, X ,M, O, SM):
     global sizeY, sizeX, defMushroomCount, defObstacleCount, defMoleCount
-    ErrorVidget = None
-    try:
-        sizeY = int(Y.get())
-    except:
-        ErrorVidget = Y
-    try:
-        sizeX = int(X.get())
-    except:
-        ErrorVidget = X
-    try:
-        defMushroomCount = int(M.get())
-    except:
-        ErrorVidget = M
-    try:
-        defMoleCount = int(SM.get())
-    except:
-        ErrorVidget = SM
-    try:
-        defObstacleCount = int(O.get())
-    except:
-        ErrorVidget = O
-    if ErrorVidget != None:
-        ErrorVidget.focus_set()
-        ErrorWindow = Toplevel()
-        ErrorWindow.title("Ошибка!!!")
-        ErrorWindow.geometry("320x75")
-        ErrorLabel = Label(ErrorWindow, text="Некоректные данные")
-        ErrorLabel.pack()
-        ErrorButton = Button(ErrorWindow, text="Ok", height=1, width=6)
-        ErrorButton.bind("<Button-1>", lambda event: ErrorWindow.destroy())
-        ErrorButton.pack()
+    IntValues = []
+    for vidget in [Y, X, M, O, SM]:
+        try:
+            IntValues.append(int(vidget.get()))
+        except:
+            ShowError("Некоректные данные", vidget)
+            return
+    if IntValues[0] > 30:
+        ShowError("Высота поля должна быть не более 30 клеток", Y)
         return
+
+    if IntValues[1] > 100:
+        ShowError("Ширина поля должна быть не более 100 клеток", X)
+        return
+
+    defOC = IntValues[0] * IntValues[1] // 10
+    if IntValues[3] > defOC:
+        ShowError("Количество препятствий должно быть не более " + str(defOC), O)
+        return
+
+    defMC = IntValues[0] * IntValues[1] - 1 - defOC
+    if IntValues[2] > defMC:
+        ShowError("Количество грибов должно быть не более " + str(defMC), M)
+        return
+
+    sizeY = IntValues[0]
+    sizeX = IntValues[1]
+    defObstacleCount = IntValues[3]
+    defMushroomCount = IntValues[2]
+
     options.destroy()
 
 
