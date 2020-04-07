@@ -25,8 +25,8 @@ defMushroomCount = 5
 MushroomCount = 5
 MushroomCords = list()
 
-defMoleCount = 5
-MoleCount = 5
+defMoleCount = 1
+MoleCount = 1
 MoleCords = list()
 
 sizeX = 10
@@ -60,65 +60,90 @@ def ShowError(ErrorText, vidget = None):
 
 def OptionsOk(options, Y, X ,M, O, SM):
     global sizeY, sizeX, defMushroomCount, defObstacleCount, defMoleCount
+    cordY = 0
+    cordX = 1
+    obst = 2
+    moles = 3
+    mush = 4
     IntValues = []
-    for vidget in [Y, X, M, O, SM]:
+    for vidget in [Y, X, O, SM, M]:
         try:
             IntValues.append(int(vidget.get()))
         except:
             ShowError("Некоректные данные", vidget)
             return
-    if IntValues[0] > 30:
+    if IntValues[cordY] > 30:
         ShowError("Высота поля должна быть не более 30 клеток", Y)
         return
 
-    if IntValues[1] > 100:
+    if IntValues[cordX] > 100:
         ShowError("Ширина поля должна быть не более 100 клеток", X)
         return
 
-    defOC = IntValues[0] * IntValues[1] // 10
-    if IntValues[3] > defOC:
+    defOC = IntValues[cordY] * IntValues[cordX] // 10
+    if IntValues[obst] > defOC:
         ShowError("Количество препятствий должно быть не более " + str(defOC), O)
         return
 
-    defMC = IntValues[0] * IntValues[1] - 1 - defOC
-    if IntValues[2] > defMC:
-        ShowError("Количество грибов должно быть не более " + str(defMC), M)
+    defSM = IntValues[cordY] * IntValues[cordX] // 10
+    if IntValues[moles] > defSM:
+        ShowError("Количество кротов должно быть не более " + str(defSM), SM)
         return
 
-    sizeY = IntValues[0]
-    sizeX = IntValues[1]
-    defObstacleCount = IntValues[3]
-    defMushroomCount = IntValues[2]
+    defMC = IntValues[cordY] * IntValues[cordX] // 20
+    if IntValues[mush] > defMC:
+        ShowError("Количество грибов должно быть не более " + str(defMC), M)
+        return
+    if IntValues[mush] < 1:
+        ShowError("Количество грибов должно быть больше 0 ", M)
+        return
 
+    sizeY = IntValues[cordY]
+    sizeX = IntValues[cordX]
+    defObstacleCount = IntValues[obst]
+    defMushroomCount = IntValues[mush]
+    defMoleCount = IntValues[moles]
     options.destroy()
 
 
 def SetOptions():
+    sizeYVar = StringVar()
+    sizeXVar = StringVar()
+    MushroomVar = StringVar()
+    ObstacleVar = StringVar()
+    MoleVar = StringVar()
+
     options = Toplevel(window)
+    options.geometry("350x170")
     options.title("Настройки игры")
     sizeYlabel = Label(options, text="Высота поля: ")
     sizeYlabel.grid(row=0, column=0, sticky=W, padx=4, pady=2)
-    sizeYentry = Entry(options)
+    sizeYentry = Entry(options, textvariable=sizeYVar)
+    sizeYVar.set(sizeY)
     sizeYentry.grid(row=0, column=1, sticky=W, padx=4, pady=2)
 
     sizeXlabel = Label(options, text="Ширина поля: ")
     sizeXlabel.grid(row=1, column=0, sticky=W, padx=4, pady=2)
-    sizeXentry = Entry(options)
+    sizeXentry = Entry(options, textvariable=sizeXVar)
+    sizeXVar.set(sizeX)
     sizeXentry.grid(row=1, column=1, sticky=W, padx=4, pady=2)
 
     MushroomCountLabel = Label(options, text="Количество грибов: ")
     MushroomCountLabel.grid(row=2, column=0, sticky=W, padx=4, pady=2)
-    MushroomCountentry = Entry(options)
+    MushroomCountentry = Entry(options, textvariable=MushroomVar)
+    MushroomVar.set(MushroomCount)
     MushroomCountentry.grid(row=2, column=1, sticky=W, padx=4, pady=2)
 
     ObstacleCountLabel = Label(options, text="Количество препятствий: ")
     ObstacleCountLabel.grid(row=3, column=0, sticky=W, padx=4, pady=2)
-    ObstacleCountEntry = Entry(options)
+    ObstacleCountEntry = Entry(options, textvariable=ObstacleVar)
+    ObstacleVar.set(ObstacleCount)
     ObstacleCountEntry.grid(row=3, column=1, sticky=W, padx=4, pady=2)
 
     MoleCountLabel = Label(options, text="Количество саблезубых кротов: ")
     MoleCountLabel.grid(row=4, column=0, sticky=W, padx=4, pady=2)
-    MoleCountEntry = Entry(options)
+    MoleCountEntry = Entry(options, textvariable=MoleVar)
+    MoleVar.set(MoleCount)
     MoleCountEntry.grid(row=4, column=1, sticky=W, padx=4, pady=2)
 
     OKbutton = Button(options, text="Ok", height=1, width=6)
@@ -217,10 +242,14 @@ def isAvaliable(x, y):
     return isFree(x, y) and not isSurround(x, y)
 
 def isAvaliableforMole(x, y):
-    return isAvaliable(x, y) and distanceToTurtle(x, y) > 4
+    minDistance = min(sizeY * sizeX // 25, 4)
+    return isAvaliable(x, y) and distanceToTurtle(x, y) > minDistance
 
 def isAvaliableforMushroom(x, y):
     return isAvaliable(x, y)
+
+def moleCanMoveTo(x, y):
+    return (isFree(x, y) or isTurtle(x, y)) and not isOut(x, y)
 
 def refreshMushroomCounter():
     VisualMushroomCount.config(text="Осталось грибов: " + str(MushroomCount))
@@ -248,8 +277,11 @@ def isMole(x, y):
             return True
     return False
 
+def isOut(x, y):
+    return x < 0 or y < 0 or x > sizeX - 1 or y > sizeY - 1
+
 def isObstacleOrOut(x, y):
-    return isObstacle(x, y) or x < 0 or y < 0 or x > sizeX or y > sizeY
+    return isObstacle(x, y) or isOut(x, y)
 
 def isFree(x, y):
     return not isMushroom(x, y) and not isTurtle(x, y) and not isObstacle(x, y) and not isMole(x, y)
@@ -292,6 +324,7 @@ def winGame():
 
 def loseGame():
     global gameEnded
+    winsound.PlaySound("aiaiai.wav", winsound.SND_ASYNC + winsound.SND_PURGE)
     gameEnded = True
     MushroomPicked = defMushroomCount - MushroomCount
     loseGameWindow = Toplevel()
@@ -304,6 +337,32 @@ def loseGame():
     CloseButton = Button(loseGameWindow, text="Закрыть")
     CloseButton.bind("<Button-1>", lambda event: loseGameWindow.destroy())
     CloseButton.pack()
+
+
+def moveMole(mole, direction):
+    global MoleCords
+    X = MoleCords[mole][0]
+    Y = MoleCords[mole][1]
+    if direction == Up:
+        Y = Y - 1
+    if direction == Left:
+        X = X - 1
+    if direction == Down:
+        Y = Y + 1
+    if direction == Right:
+        X = X + 1
+    if moleCanMoveTo(X, Y):
+        Map[MoleCords[mole][1]][MoleCords[mole][0]] = BackgroundSymbol
+        MoleCords[mole][0] = X
+        MoleCords[mole][1] = Y
+        Map[Y][X] = MoleSymbol
+        drawMap()
+    if isTurtle(X, Y):
+        loseGame()
+
+def moveAllMoles():
+    for i in range(0, MoleCount):
+        moveMole(i, random.randint(1, 4))
 
 def moveTurtle(direction):
     global TurtleCordsY, TurtleCordsX, gameEnded
@@ -325,12 +384,12 @@ def moveTurtle(direction):
     TurtleCordsY = CordY
     TurtleCordsX = CordX
     if isMole(TurtleCordsX, TurtleCordsY):
-        winsound.PlaySound("aiaiai.wav", winsound.SND_ASYNC + winsound.SND_PURGE)
         loseGame()
         drawMap()
         return
     placeTurtle()
     checkAndEat()
+    moveAllMoles()
 
 
 def Newgame():
