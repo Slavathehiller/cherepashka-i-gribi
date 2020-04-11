@@ -21,19 +21,24 @@ defObstacleCount = 5
 ObstacleCount = 5
 ObstacleCords = list()
 
-defMushroomCount = 5
-MushroomCount = 5
+defMushroomCount = 2
+MushroomCount = 2
 MushroomCords = list()
 
 defMoleCount = 1
 MoleCount = 1
 MoleCords = list()
+MoleSniffRange = 5
+
+SlowMoles = 0
 
 sizeX = 10
 sizeY = 5
 
 TurtleCordsX = sizeX // 2
 TurtleCordsY = sizeY // 2
+
+TurtleStep = 0
 
 Up = 1
 Down = 2
@@ -58,8 +63,8 @@ def ShowError(ErrorText, vidget = None):
     if vidget != None:
         vidget.focus_set()
 
-def OptionsOk(options, Y, X ,M, O, SM):
-    global sizeY, sizeX, defMushroomCount, defObstacleCount, defMoleCount
+def OptionsOk(options, Y, X ,M, O, SM, SMV):
+    global sizeY, sizeX, defMushroomCount, defObstacleCount, defMoleCount, SlowMoles
     cordY = 0
     cordX = 1
     obst = 2
@@ -97,7 +102,7 @@ def OptionsOk(options, Y, X ,M, O, SM):
     if IntValues[mush] < 1:
         ShowError("Количество грибов должно быть больше 0 ", M)
         return
-
+    SlowMoles = SMV.get()
     sizeY = IntValues[cordY]
     sizeX = IntValues[cordX]
     defObstacleCount = IntValues[obst]
@@ -112,9 +117,10 @@ def SetOptions():
     MushroomVar = StringVar()
     ObstacleVar = StringVar()
     MoleVar = StringVar()
+    SlowMolesVar = IntVar()
 
     options = Toplevel(window)
-    options.geometry("350x170")
+    options.geometry("500x170")
     options.title("Настройки игры")
     sizeYlabel = Label(options, text="Высота поля: ")
     sizeYlabel.grid(row=0, column=0, sticky=W, padx=4, pady=2)
@@ -146,15 +152,18 @@ def SetOptions():
     MoleVar.set(MoleCount)
     MoleCountEntry.grid(row=4, column=1, sticky=W, padx=4, pady=2)
 
+    SlowMolesCheckButton = Checkbutton(options, text="Медленные кроты", variable=SlowMolesVar)
+    SlowMolesVar.set(SlowMoles)
+    SlowMolesCheckButton.grid(row=0, column=2, sticky=W, padx=4, pady=2)
+
+
     OKbutton = Button(options, text="Ok", height=1, width=6)
     OKbutton.grid(row=5, column=0, sticky=E, padx=30)
-    OKbutton.bind("<Button-1>", lambda event: OptionsOk(options, sizeYentry, sizeXentry, MushroomCountentry, ObstacleCountEntry, MoleCountEntry))
+    OKbutton.bind("<Button-1>", lambda event: OptionsOk(options, sizeYentry, sizeXentry, MushroomCountentry, ObstacleCountEntry, MoleCountEntry, SlowMolesVar))
 
     Cancelbutton = Button(options, text="Cancel", height=1, width=6)
     Cancelbutton.grid(row=5, column=1, sticky=W, padx=30)
     Cancelbutton.bind("<Button-1>", lambda event: options.destroy())
-
-
 
 def createNewMap():
     global Map
@@ -316,7 +325,7 @@ def winGame():
     loseGameWindow = Toplevel()
     loseGameWindow.title("Победа")
     loseGameWindow.geometry("300x80")
-    loseGameLabel = Label(loseGameWindow, text="Вы выиграли")
+    loseGameLabel = Label(loseGameWindow, text="Вы выиграли\nПройдено шагов: " + str(TurtleStep))
     loseGameLabel.pack()
     CloseButton = Button(loseGameWindow, text="Закрыть")
     CloseButton.bind("<Button-1>", lambda event: loseGameWindow.destroy())
@@ -330,7 +339,7 @@ def loseGame():
     loseGameWindow = Toplevel()
     loseGameWindow.title("Поражение")
     loseGameWindow.geometry("300x80")
-    loseGameLabel = Label(loseGameWindow, text="Вы проиграли")
+    loseGameLabel = Label(loseGameWindow, text="Вы проиграли\nПройдено шагов: " + str(TurtleStep))
     loseGameLabel.pack()
     MushroomLabel = Label(loseGameWindow, text="Собрано грибов: " + str(MushroomPicked))
     MushroomLabel.pack()
@@ -362,14 +371,32 @@ def moveMole(mole, direction):
 
 def moveAllMoles():
     for i in range(0, MoleCount):
-        moveMole(i, random.randint(1, 4))
+        if distanceToTurtle(MoleCords[i][0], MoleCords[i][1]) < MoleSniffRange:
+            deltaX = TurtleCordsX - MoleCords[i][0]
+            deltaY = TurtleCordsY - MoleCords[i][1]
+            if abs(deltaX) > abs(deltaY):
+                if deltaX > 0:
+                    direction = Right
+                else:
+                    direction = Left
+            else:
+                if deltaY > 0:
+                    direction = Down
+                else:
+                    direction = Up
+        else:
+            direction = random.randint(1, 4)
+        moveMole(i, direction)
+
+
 
 def moveTurtle(direction):
-    global TurtleCordsY, TurtleCordsX, gameEnded
+    global TurtleCordsY, TurtleCordsX, gameEnded, TurtleStep
     if gameEnded:
         return
     CordY = TurtleCordsY
     CordX = TurtleCordsX
+    TurtleStep = TurtleStep + 1
     if direction == Up:
         CordY = max(TurtleCordsY - 1, 0)
     if direction == Left:
@@ -389,12 +416,14 @@ def moveTurtle(direction):
         return
     placeTurtle()
     checkAndEat()
-    moveAllMoles()
+    if TurtleStep % 2 == 0 or SlowMoles == 0:
+        moveAllMoles()
 
 
 def Newgame():
-    global TurtleCordsY, TurtleCordsX, gameEnded
+    global TurtleCordsY, TurtleCordsX, gameEnded, TurtleStep
     gameEnded = False
+    TurtleStep = 0
     TurtleCordsX = sizeX // 2
     TurtleCordsY = sizeY // 2
     placeObstacles()
